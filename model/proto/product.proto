@@ -19,6 +19,33 @@ message CreateProductResponse {
     Product product = 1;
 }
 
+message ReadProductRequest {
+    string id = 1;
+}
+
+message ReadProductResponse {
+    Product product = 1;
+}
+
+message UpdateProductRequest {
+    Product product = 1;
+}
+
+message UpdateProductResponse {
+    Product product = 1;
+}
+
+message DeleteProductRequest {
+    string id = 1;
+}
+
+message DeleteProductResponse {
+    string id = 1;
+}
+
 service ProductService {
     rpc CreateProduct(CreateProductRequest) returns(CreateProductResponse){};
+    rpc ReadProduct(ReadProductRequest) returns(ReadProductResponse){};
+    rpc UpdateProduct(UpdateProductRequest) returns(UpdateProductResponse){};
+    rpc DeleteProduct(DeleteProductRequest) returns(DeleteProductResponse){};
 }

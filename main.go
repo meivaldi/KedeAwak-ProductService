@@ -9,7 +9,9 @@ import (
 	"os/signal"
 	"time"
 
+	"github.com/kede-awak/product-service/model/entity"
 	"github.com/kede-awak/product-service/model/proto"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -42,7 +44,7 @@ func (*server) CreateProduct(ctx context.Context, req *proto.CreateProductReques
 		)
 	}
 
-	oid, ok := res.InsertedID.(primitive.ObjectID)
+	_, ok := res.InsertedID.(primitive.ObjectID)
 	if !ok {
 		return nil, status.Errorf(
 			codes.Internal,
@@ -52,12 +54,128 @@ func (*server) CreateProduct(ctx context.Context, req *proto.CreateProductReques
 
 	return &proto.CreateProductResponse{
 		Product: &proto.Product{
-			Id:          oid.Hex(),
 			Name:        product.GetName(),
 			Description: product.GetDescription(),
 			Stock:       product.GetStock(),
 			Price:       product.GetPrice(),
 		},
+	}, nil
+}
+
+func (*server) ReadProduct(ctx context.Context, req *proto.ReadProductRequest) (*proto.ReadProductResponse, error) {
+	productId := req.GetId()
+	oid, err := primitive.ObjectIDFromHex(productId)
+	if err != nil {
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			fmt.Sprintf("Cannot parse product id: %v\n", err),
+		)
+	}
+
+	data := &entity.Product{}
+	filter := bson.D{{"_id", oid}}
+
+	res := collection.FindOne(context.Background(), filter)
+	if err := res.Decode(data); err != nil {
+		return nil, status.Errorf(
+			codes.NotFound,
+			fmt.Sprintf("Cannot find document with specified id: %v\n", err),
+		)
+	}
+
+	return &proto.ReadProductResponse{
+		Product: &proto.Product{
+			Name:        data.Name,
+			Description: data.Description,
+			Stock:       int32(data.Stock),
+			Price:       float32(data.Price),
+		},
+	}, nil
+}
+
+func (*server) UpdateProduct(ctx context.Context, req *proto.UpdateProductRequest) (*proto.UpdateProductResponse, error) {
+	product := req.GetProduct()
+	oid, err := primitive.ObjectIDFromHex(product.GetId())
+	if err != nil {
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			fmt.Sprintf("Cannot parse product id: %v\n", err),
+		)
+	}
+
+	data := &entity.Product{}
+	filter := bson.D{{"_id", oid}}
+
+	res := collection.FindOne(context.Background(), filter)
+	if err := res.Decode(data); err != nil {
+		return nil, status.Errorf(
+			codes.NotFound,
+			fmt.Sprintf("Cannot find document with specified id: %v\n", err),
+		)
+	}
+
+	data.Name = product.GetName()
+	data.Description = product.GetDescription()
+	data.Price = float64(product.GetPrice())
+	data.Stock = int(product.GetStock())
+
+	_, errUpdate := collection.ReplaceOne(context.Background(), filter, data)
+	if errUpdate != nil {
+		return nil, status.Errorf(
+			codes.Internal,
+			fmt.Sprintf("Cannot update data: %v\n", errUpdate),
+		)
+	}
+
+	return &proto.UpdateProductResponse{
+		Product: &proto.Product{
+			Id:          data.Id.Hex(),
+			Name:        data.Name,
+			Description: data.Description,
+			Price:       float32(data.Price),
+			Stock:       int32(data.Stock),
+		},
+	}, nil
+}
+
+func (*server) DeleteProduct(ctx context.Context, req *proto.DeleteProductRequest) (*proto.DeleteProductResponse, error) {
+	productId := req.GetId()
+	oid, err := primitive.ObjectIDFromHex(productId)
+	if err != nil {
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			fmt.Sprintf("Cannot parse product id: %v\n", err),
+		)
+	}
+
+	data := &entity.Product{}
+	filter := bson.D{{"_id", oid}}
+
+	res := collection.FindOne(context.Background(), filter)
+	if err := res.Decode(data); err != nil {
+		return nil, status.Errorf(
+			codes.NotFound,
+			fmt.Sprintf("Cannot find document with specified id: %v\n", err),
+		)
+	}
+
+	errRes, errDelete := collection.DeleteOne(context.Background(), filter)
+	if errDelete != nil {
+		return nil, status.Errorf(
+			codes.Internal,
+			fmt.Sprintf("Cannot delete data: %v\n", errDelete),
+		)
+	}
+
+	if errRes.DeletedCount == 0 {
+		return nil, status.Errorf(
+			codes.NotFound,
+			fmt.Sprintf("Cannot find document with specified id: %v\n", errDelete),
+		)
+	}
+
+	return &proto.DeleteProductResponse{
+		Id: productId,
 	}, nil
 }
 
