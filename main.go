@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net"
@@ -9,6 +10,7 @@ import (
 	"os/signal"
 	"time"
 
+	"github.com/go-redis/redis/v8"
 	"github.com/kede-awak/product-service/model/entity"
 	"github.com/kede-awak/product-service/model/proto"
 	"go.mongodb.org/mongo-driver/bson"
@@ -82,6 +84,31 @@ func (*server) ReadProduct(ctx context.Context, req *proto.ReadProductRequest) (
 			fmt.Sprintf("Cannot find document with specified id: %v\n", err),
 		)
 	}
+
+	product := &entity.Product{
+		Id:          data.Id,
+		Name:        data.Name,
+		Description: data.Description,
+		Stock:       data.Stock,
+		Price:       data.Price,
+	}
+	jsonProduct, err := json.Marshal(product)
+	if err != nil {
+		log.Fatalf("Cannot convert data to json format: %v\n", err)
+	}
+
+	//redis connection block
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     "localhost:6379",
+		Password: "",
+		DB:       0,
+	})
+
+	errRedis := rdb.Set(ctx, "product", jsonProduct, 15*time.Second).Err()
+	if errRedis != nil {
+		log.Fatalf("Redis error: %v\n", errRedis)
+	}
+	//
 
 	return &proto.ReadProductResponse{
 		Product: &proto.Product{
