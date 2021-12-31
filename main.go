@@ -85,18 +85,6 @@ func (*server) ReadProduct(ctx context.Context, req *proto.ReadProductRequest) (
 		)
 	}
 
-	product := &entity.Product{
-		Id:          data.Id,
-		Name:        data.Name,
-		Description: data.Description,
-		Stock:       data.Stock,
-		Price:       data.Price,
-	}
-	jsonProduct, err := json.Marshal(product)
-	if err != nil {
-		log.Fatalf("Cannot convert data to json format: %v\n", err)
-	}
-
 	//redis connection block
 	rdb := redis.NewClient(&redis.Options{
 		Addr:     "localhost:6379",
@@ -104,20 +92,49 @@ func (*server) ReadProduct(ctx context.Context, req *proto.ReadProductRequest) (
 		DB:       0,
 	})
 
-	errRedis := rdb.Set(ctx, "product", jsonProduct, 15*time.Second).Err()
-	if errRedis != nil {
-		log.Fatalf("Redis error: %v\n", errRedis)
-	}
-	//
+	//if data exist in redis db, we return product data from redis
+	exist := rdb.Exists(ctx, "product")
+	if exist.Val() == 1 {
+		resProduct := rdb.Get(ctx, "product").Val()
+		jsonProduct := entity.Product{}
+		json.Unmarshal([]byte(resProduct), &jsonProduct)
 
-	return &proto.ReadProductResponse{
-		Product: &proto.Product{
+		return &proto.ReadProductResponse{
+			Product: &proto.Product{
+				Name:        jsonProduct.Name,
+				Description: jsonProduct.Description,
+				Stock:       int32(jsonProduct.Stock),
+				Price:       float32(jsonProduct.Price),
+			},
+		}, nil
+		//if not exist, then we return product data from gRPC call
+	} else {
+		product := &entity.Product{
+			Id:          data.Id,
 			Name:        data.Name,
 			Description: data.Description,
-			Stock:       int32(data.Stock),
-			Price:       float32(data.Price),
-		},
-	}, nil
+			Stock:       data.Stock,
+			Price:       data.Price,
+		}
+		jsonProduct, err := json.Marshal(product)
+		if err != nil {
+			log.Fatalf("Cannot convert data to json format: %v\n", err)
+		}
+
+		errRedis := rdb.Set(ctx, "product", jsonProduct, 10*time.Minute).Err()
+		if errRedis != nil {
+			log.Fatalf("Redis error: %v\n", errRedis)
+		}
+
+		return &proto.ReadProductResponse{
+			Product: &proto.Product{
+				Name:        data.Name,
+				Description: data.Description,
+				Stock:       int32(data.Stock),
+				Price:       float32(data.Price),
+			},
+		}, nil
+	}
 }
 
 func (*server) UpdateProduct(ctx context.Context, req *proto.UpdateProductRequest) (*proto.UpdateProductResponse, error) {
