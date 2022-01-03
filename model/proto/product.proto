@@ -9,6 +9,7 @@ message Product {
     string description = 3;
     int32 stock = 4;
     float price = 5;
+    string tipe = 6;
 }
 
 message CreateProductRequest {

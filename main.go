@@ -36,6 +36,7 @@ func (*server) CreateProduct(ctx context.Context, req *proto.CreateProductReques
 		Description: product.GetDescription(),
 		Stock:       product.GetStock(),
 		Price:       product.GetPrice(),
+		Tipe:        product.GetTipe(),
 	}
 
 	res, err := collection.InsertOne(context.Background(), data)
@@ -60,6 +61,7 @@ func (*server) CreateProduct(ctx context.Context, req *proto.CreateProductReques
 			Description: product.GetDescription(),
 			Stock:       product.GetStock(),
 			Price:       product.GetPrice(),
+			Tipe:        product.GetTipe(),
 		},
 	}, nil
 }
@@ -105,6 +107,7 @@ func (*server) ReadProduct(ctx context.Context, req *proto.ReadProductRequest) (
 				Description: jsonProduct.Description,
 				Stock:       int32(jsonProduct.Stock),
 				Price:       float32(jsonProduct.Price),
+				Tipe:        jsonProduct.Type,
 			},
 		}, nil
 		//if not exist, then we return product data from gRPC call
@@ -115,6 +118,7 @@ func (*server) ReadProduct(ctx context.Context, req *proto.ReadProductRequest) (
 			Description: data.Description,
 			Stock:       data.Stock,
 			Price:       data.Price,
+			Type:        data.Type,
 		}
 		jsonProduct, err := json.Marshal(product)
 		if err != nil {
@@ -132,6 +136,7 @@ func (*server) ReadProduct(ctx context.Context, req *proto.ReadProductRequest) (
 				Description: data.Description,
 				Stock:       int32(data.Stock),
 				Price:       float32(data.Price),
+				Tipe:        data.Type,
 			},
 		}, nil
 	}
@@ -162,6 +167,7 @@ func (*server) UpdateProduct(ctx context.Context, req *proto.UpdateProductReques
 	data.Description = product.GetDescription()
 	data.Price = float64(product.GetPrice())
 	data.Stock = int(product.GetStock())
+	data.Type = product.Tipe
 
 	_, errUpdate := collection.ReplaceOne(context.Background(), filter, data)
 	if errUpdate != nil {
@@ -178,6 +184,7 @@ func (*server) UpdateProduct(ctx context.Context, req *proto.UpdateProductReques
 			Description: data.Description,
 			Price:       float32(data.Price),
 			Stock:       int32(data.Stock),
+			Tipe:        data.Type,
 		},
 	}, nil
 }

@@ -8,4 +8,5 @@ type Product struct {
 	Description string             `bson:"description"`
 	Stock       int                `bson:"stock"`
 	Price       float64            `bson:"price"`
+	Type        string             `bson:"tipe"`
 }

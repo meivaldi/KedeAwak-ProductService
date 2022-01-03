@@ -27,6 +27,7 @@ func TestProductCreate(t *testing.T) {
 			Description: "Ipad Pro M1 11 Inch Wifi Only",
 			Stock:       8,
 			Price:       12000000,
+			Tipe:        "0",
 		},
 	}
 
@@ -76,6 +77,7 @@ func TestProductUpdate(t *testing.T) {
 			Description: "Ipad Pro M1 12.9 Inch Cellular 128GB di tokohapedia",
 			Price:       14490000,
 			Stock:       50,
+			Tipe:        "0",
 		},
 	}
 
